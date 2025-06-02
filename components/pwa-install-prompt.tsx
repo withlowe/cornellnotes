@@ -2,16 +2,12 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Download, X, Smartphone, Monitor } from "lucide-react"
 
 interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[]
-  readonly userChoice: Promise<{
-    outcome: "accepted" | "dismissed"
-    platform: string
-  }>
   prompt(): Promise<void>
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
 export function PWAInstallPrompt() {
@@ -19,36 +15,26 @@ export function PWAInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false)
   const [isInstalled, setIsInstalled] = useState(false)
   const [isIOS, setIsIOS] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
 
   useEffect(() => {
-    // Check if app is already installed
-    const checkInstalled = () => {
-      const standalone = window.matchMedia("(display-mode: standalone)").matches
-      const isInWebAppiOS = (window.navigator as any).standalone === true
-      setIsStandalone(standalone || isInWebAppiOS)
-      setIsInstalled(standalone || isInWebAppiOS)
+    // Check if already installed
+    if (window.matchMedia("(display-mode: standalone)").matches) {
+      setIsInstalled(true)
+      return
     }
 
     // Check if iOS
-    const checkIOS = () => {
-      const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      setIsIOS(isIOSDevice)
-    }
-
-    checkInstalled()
-    checkIOS()
+    const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    setIsIOS(iOS)
 
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
 
-      // Show prompt after a delay if not already installed
+      // Show prompt after a delay to not be intrusive
       setTimeout(() => {
-        if (!isInstalled) {
-          setShowPrompt(true)
-        }
+        setShowPrompt(true)
       }, 3000)
     }
 
@@ -66,7 +52,7 @@ export function PWAInstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
       window.removeEventListener("appinstalled", handleAppInstalled)
     }
-  }, [isInstalled])
+  }, [])
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return
@@ -76,13 +62,15 @@ export function PWAInstallPrompt() {
       const { outcome } = await deferredPrompt.userChoice
 
       if (outcome === "accepted") {
-        setIsInstalled(true)
+        console.log("User accepted the install prompt")
+      } else {
+        console.log("User dismissed the install prompt")
       }
-
-      setShowPrompt(false)
-      setDeferredPrompt(null)
     } catch (error) {
       console.error("Error during installation:", error)
+    } finally {
+      setDeferredPrompt(null)
+      setShowPrompt(false)
     }
   }
 
@@ -93,63 +81,67 @@ export function PWAInstallPrompt() {
   }
 
   // Don't show if already installed or dismissed this session
-  if (isInstalled || isStandalone || sessionStorage.getItem("pwa-prompt-dismissed")) {
+  if (isInstalled || sessionStorage.getItem("pwa-prompt-dismissed")) {
     return null
   }
 
-  // Don't show if no install prompt available and not iOS
-  if (!deferredPrompt && !isIOS) {
-    return null
-  }
-
-  if (!showPrompt) return null
-
-  return (
-    <Card className="fixed bottom-4 left-4 right-4 z-50 shadow-lg border-2 md:left-auto md:right-4 md:w-96">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              {isIOS ? <Smartphone className="h-5 w-5" /> : <Monitor className="h-5 w-5" />}
+  // iOS install instructions
+  if (isIOS && showPrompt) {
+    return (
+      <Card className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm border-2 border-primary/20 bg-background/95 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Smartphone className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm mb-1">Install Cornell Notes</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Tap the share button{" "}
+                <span className="inline-block w-4 h-4 bg-primary/10 rounded text-center text-xs">↗</span> and select
+                "Add to Home Screen"
+              </p>
+              <Button variant="outline" size="sm" onClick={handleDismiss} className="w-full">
+                Got it
+              </Button>
             </div>
-            <div>
-              <CardTitle className="text-lg">Install Cornell Notes</CardTitle>
-              <CardDescription className="text-sm">Get the full app experience with offline access</CardDescription>
-            </div>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleDismiss} className="h-8 w-8">
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-3">
-          <div className="text-sm text-muted-foreground">
-            <ul className="space-y-1">
-              <li>• Work offline without internet</li>
-              <li>• Faster loading and performance</li>
-              <li>• Native app-like experience</li>
-              <li>• Quick access from home screen</li>
-            </ul>
-          </div>
-
-          {isIOS ? (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">To install on iOS:</p>
-              <ol className="text-sm text-muted-foreground space-y-1">
-                <li>1. Tap the Share button in Safari</li>
-                <li>2. Scroll down and tap "Add to Home Screen"</li>
-                <li>3. Tap "Add" to confirm</li>
-              </ol>
-            </div>
-          ) : (
-            <Button onClick={handleInstallClick} className="w-full gap-2">
-              <Download className="h-4 w-4" />
-              Install App
+            <Button variant="ghost" size="sm" onClick={handleDismiss} className="p-1 h-auto">
+              <X className="h-4 w-4" />
             </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Standard install prompt
+  if (showPrompt && deferredPrompt) {
+    return (
+      <Card className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm border-2 border-primary/20 bg-background/95 backdrop-blur-sm">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Monitor className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm mb-1">Install Cornell Notes</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Install this app for a better experience with offline access and fullscreen mode.
+              </p>
+              <div className="flex gap-2">
+                <Button onClick={handleInstallClick} size="sm" className="flex-1 gap-2">
+                  <Download className="h-4 w-4" />
+                  Install
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleDismiss}>
+                  Later
+                </Button>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={handleDismiss} className="p-1 h-auto">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return null
 }

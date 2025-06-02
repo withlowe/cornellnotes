@@ -13,7 +13,7 @@ import { TableGenerator } from "@/components/table-generator"
 import { ImageInserter } from "@/components/image-inserter"
 import { NoteLinkInput } from "@/components/note-link-input"
 import { exportToPdf } from "@/lib/export-utils"
-import { saveDocument, getDocument } from "@/lib/enhanced-storage"
+import { saveDocument, getDocument } from "@/lib/storage-utils"
 import { WysimarkEditor } from "@/components/wysimark-editor"
 import { Hash } from "lucide-react"
 import { exportToAnki } from "@/lib/anki-export-utils"
@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
 import { DiagramInserter } from "@/components/diagram-inserter"
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
 
 export default function NotesEditorPage() {
   const router = useRouter()
@@ -358,7 +357,6 @@ Add your main ideas and concepts.`)
         onClose={() => setIsDiagramInserterOpen(false)}
         onInsert={handleInsertImage}
       />
-      <PWAInstallPrompt />
     </main>
   )
 }

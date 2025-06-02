@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { getAllDocuments, deleteDocument, type DocumentData } from "@/lib/enhanced-storage"
+import { getAllDocuments, deleteDocument, type DocumentData } from "@/lib/storage-utils"
 import { exportAllToZip, importMarkdownFiles } from "@/lib/export-import-utils"
 import { cn } from "@/lib/utils"
 import { CornellNotes } from "@/components/cornell-notes"
@@ -24,8 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { exportToPdf } from "@/lib/export-utils"
 import { ChevronDown, Search, X, Tag } from "lucide-react"
-import { PWAInstallPrompt } from "@/components/pwa-install-prompt"
-import { StorageManager } from "@/components/storage-manager"
 
 export default function LibraryPage() {
   const router = useRouter()
@@ -36,7 +34,6 @@ export default function LibraryPage() {
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [isStorageManagerOpen, setIsStorageManagerOpen] = useState(false)
 
   // Compute filtered documents directly during render
   const filteredDocuments = useMemo(() => {
@@ -432,9 +429,6 @@ export default function LibraryPage() {
                 <Button variant="outline" size="sm" onClick={handleImportClick} disabled={isImporting}>
                   {isImporting ? "Importing..." : "Import"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setIsStorageManagerOpen(true)}>
-                  Storage
-                </Button>
               </div>
               <input
                 type="file"
@@ -545,8 +539,6 @@ export default function LibraryPage() {
           )}
         </main>
       </div>
-      <PWAInstallPrompt />
-      <StorageManager isOpen={isStorageManagerOpen} onClose={() => setIsStorageManagerOpen(false)} />
     </div>
   )
 }
